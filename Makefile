@@ -10,6 +10,7 @@ export BLOCKSDS ?= /opt/blocksds/core
 
 OBJCOPY	:= $(WONDERFUL_TOOLCHAIN)/toolchain/gcc-arm-none-eabi/bin/arm-none-eabi-objcopy
 AS		:= $(WONDERFUL_TOOLCHAIN)/toolchain/gcc-arm-none-eabi/bin/arm-none-eabi-as
+NPACK	:= $(WONDERFUL_TOOLCHAIN)/bin/wf-nnpack-lzss
 CP		:= cp
 MV		:= mv
 MAKE	:= make
@@ -41,12 +42,15 @@ clean:
 	$(_V)$(RM) build $(TARGET).nds $(TARGET)-enc.nds datel_rom.bin
 	$(_V)$(MAKE) -C sd_patches clean
 
-$(TARGET).nds: build/arm9.bin
+
+
+$(TARGET).nds: build/arm9.bin build/arm7.bin
 	@echo "  BUILDING"
 	$(_V)$(BLOCKSDS)/tools/ndstool/ndstool -c $@ \
-		-7 data/arm7.bin -9 build/arm9.bin \
+		-7 build/arm7.bin -9 build/arm9.bin \
 		-t data/banner.bin -h data/header.bin \
-		-r9 0x02100000 -e9 0x02100800
+		-r9 0x02100000 -e9 0x02100800 \
+		-r7 0x02380000 -e7 0x02380000
 
 $(TARGET)-enc.nds: $(TARGET).nds
 	@echo "  ENCRYPTING"
@@ -57,11 +61,20 @@ $(TARGET)-enc.nds: $(TARGET).nds
 	$(_V)$(BLOCKSDS)/tools/ndstool/ndstool -fh $@
 	$(_V)$(CP) $@ datel_rom.bin
 
-build/arm9.bin: sd_patches
+build/arm9-c.bin: data/arm9.bin
 	@$(MKDIR) -p build
-	$(_V)$(AS) -I src -I sd_patches/build src/loader.s -o build/loader.out
-	$(_V)$(OBJCOPY) -O binary build/loader.out build/loader.frm
-	$(_V)$(CAT) data/bare-entrypoint.bin build/loader.frm > build/arm9.bin
+	$(_V)$(NPACK) -ewo data/arm9.bin build/arm9-c.bin
+
+build/arm9.bin: sd_patches build/arm9-c.bin
+	@$(MKDIR) -p build
+	$(_V)$(AS) -I src -I build -I sd_patches/build src/loader9.s -o build/loader9.out
+	$(_V)$(OBJCOPY) -O binary build/loader9.out build/loader9.frm
+	$(_V)$(CAT) data/bare-entrypoint.bin build/loader9.frm > build/arm9.bin
+
+build/arm7.bin: data/arm7.bin
+	@$(MKDIR) -p build
+	$(_V)$(AS) -I data -I sd_patches/build src/loader7.s -o build/loader7.out
+	$(_V)$(OBJCOPY) -O binary build/loader7.out build/arm7.bin
 
 sd_patches:
 	$(_V)$(MAKE) -C sd_patches

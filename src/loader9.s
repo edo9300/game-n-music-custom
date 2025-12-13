@@ -50,7 +50,7 @@ copy:
 
 .balign 4, 0xff
 arm9_payload:
-.incbin "arm9.bin"
+.incbin "arm9-c.bin"
 
 .balign 4, 0xff
 sd_write_start:
