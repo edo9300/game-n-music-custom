@@ -32,14 +32,14 @@ endif
 # Build rules
 # -----------
 
-.PHONY: all clean miniboot stage1
+.PHONY: all clean sd_patches
 
-all: $(TARGET).nds $(TARGET)-enc.nds
+all: $(TARGET)-enc.nds
 	
-
 clean:
 	@echo "  CLEAN"
-	$(_V)$(RM) build $(TARGET).nds $(TARGET)-enc.nds
+	$(_V)$(RM) build $(TARGET).nds $(TARGET)-enc.nds datel_rom.bin
+	$(_V)$(MAKE) -C sd_patches clean
 
 $(TARGET).nds: build/arm9.bin
 	@echo "  BUILDING"
@@ -55,11 +55,13 @@ $(TARGET)-enc.nds: $(TARGET).nds
 	$(_V)$(DD) if=$(TARGET).nds of=build/$@ skip=36 seek=36 status=none
 	$(_V)$(MV) build/$@ $@
 	$(_V)$(BLOCKSDS)/tools/ndstool/ndstool -fh $@
+	$(_V)$(CP) $@ datel_rom.bin
 
-build/arm9.bin:
+build/arm9.bin: sd_patches
 	@$(MKDIR) -p build
-	$(_V)$(AS) -I src src/loader.s -o build/loader.out
+	$(_V)$(AS) -I src -I sd_patches/build src/loader.s -o build/loader.out
 	$(_V)$(OBJCOPY) -O binary build/loader.out build/loader.frm
 	$(_V)$(CAT) data/bare-entrypoint.bin build/loader.frm > build/arm9.bin
-	
-	
+
+sd_patches:
+	$(_V)$(MAKE) -C sd_patches

@@ -17,13 +17,52 @@ entrypoint:
 	ldr r1, =#0x02000800
 	movs r4, r1
 	swi 0x110000
+
+	adrl r0, sd_write_start
+	adrl r1, sd_write_end
+	ldr r2, =#0x20181cc
+	bl copy
+
+	adrl r0, sd_read_start
+	adrl r1, sd_read_end
+	ldr r2, =#0x20186ec
+	bl copy
+
+	adrl r0, sd_init_start
+	adrl r1, sd_init_end
+	ldr r2, =#0x2018b18
+	bl copy
+	
 	mov r0, #0
 	mrc p15, 0, r0, c7, c6, 0
 	mov r0, #0
 	mrc p15, 0, r0, c7, c5, 0
 	bx r4
+
+copy:
+1:
+	ldr r3, [r0], # 4
+	str r3, [r2], # 4
+	cmp r0, r1
+	blt 1b
+	bx lr
 .pool
 
 .balign 4, 0xff
 arm9_payload:
 .incbin "arm9.bin"
+
+.balign 4, 0xff
+sd_write_start:
+.incbin "sdWrite.bin"
+sd_write_end:
+
+.balign 4, 0xff
+sd_read_start:
+.incbin "sdRead.bin"
+sd_read_end:
+
+.balign 4, 0xff
+sd_init_start:
+.incbin "startup.bin"
+sd_init_end:
