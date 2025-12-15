@@ -39,7 +39,7 @@ all: $(TARGET)-enc.nds
 	
 clean:
 	@echo "  CLEAN"
-	$(_V)$(RM) build $(TARGET).nds $(TARGET)-enc.nds datel_rom.bin
+	$(_V)$(RM) build $(TARGET).nds $(TARGET)-enc.nds gnm-backup.bin
 	$(_V)$(MAKE) -C sd_patches clean
 
 
@@ -59,7 +59,7 @@ $(TARGET)-enc.nds: $(TARGET).nds
 	$(_V)$(DD) if=$(TARGET).nds of=build/$@ skip=36 seek=36 status=none
 	$(_V)$(MV) build/$@ $@
 	$(_V)$(BLOCKSDS)/tools/ndstool/ndstool -fh $@
-	$(_V)$(CP) $@ datel_rom.bin
+	$(_V)$(CP) $@ gnm-backup.bin
 
 build/arm9-c.bin: data/arm9.bin
 	@$(MKDIR) -p build
