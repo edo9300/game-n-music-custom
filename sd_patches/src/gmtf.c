@@ -125,14 +125,17 @@ static u8 ndsarSdcardCommandSend (u8 cmdId, u32 arg)
 
 #define GLOBAL_SD_BUFFER (uint8_t*)0x2065BCC
 
-static bool readSector (u32 sector, u8* dest)
+[[gnu::noinline]] static bool readSector (u32 sector, u8* dest)
 {
 	volatile u32 temp;
 	initSpi(SPI_START);
-	
+
 	bool isSdhc = *GLOBAL_SD_BUFFER != 0;
+
+	if(!isSdhc)
+		sector <<= 9;
 	
-	if (sendCommand (READ_SINGLE_BLOCK, sector * (BYTES_PER_SECTOR - (511 * isSdhc))) != 0x00) {
+	if (sendCommand (READ_SINGLE_BLOCK, sector) != 0x00) {
 		initSpi(SPI_STOP);
 		return false;
 	}
@@ -157,13 +160,16 @@ static bool readSector (u32 sector, u8* dest)
 	return true;
 }
 
-static bool writeSector (u32 sector, u8* src)
+[[gnu::noinline]] static bool writeSector (u32 sector, u8* src)
 {
 	initSpi(SPI_START);
 	
 	bool isSdhc = *GLOBAL_SD_BUFFER != 0;
 
-	if (sendCommand (WRITE_SINGLE_BLOCK, sector * (BYTES_PER_SECTOR - (511 * isSdhc))) != 0) {
+	if(!isSdhc)
+		sector <<= 9;
+
+	if (sendCommand (WRITE_SINGLE_BLOCK, sector) != 0) {
 		initSpi(SPI_STOP);
 		return false;
 	}
@@ -216,15 +222,7 @@ typedef int(*volatile release_mutex_t)(void*, int);
 #define acquire_mutex(a,b) (*(acquire_mutex_t)0x0201fe68)(a, b)
 #define release_mutex(a,b) (*(release_mutex_t)0x0201fe9c)(a, b)
 
-// #define REG_EXMEMCNT    (*(vu16 *)0x04000204)
-// #define EXMEMCNT_CARD_ARM7                  BIT(11)
-// #define ARM7_OWNS_CARD                      EXMEMCNT_CARD_ARM7
-
-// static inline void sysSetCardOwner(bool arm9)
-// {
-    // REG_EXMEMCNT = (REG_EXMEMCNT & ~ARM7_OWNS_CARD) | (arm9 ? 0 : ARM7_OWNS_CARD);
-// }
-static bool ndsarSdcardInitGnm (void)
+[[gnu::noinline]] static bool ndsarSdcardInitGnm (void)
 {
 	bool isv2 = false;
     for (int i = 0; i < 0x100; i++)
@@ -277,7 +275,7 @@ static bool ndsarSdcardInitGnm (void)
 
 #ifdef STARTUP
 
-bool startup(void) {
+ARM_CODE bool startup(void) {
 	while (acquire_mutex(MUTEX_ADDR,2) != 0);
 	sysSetCardOwner(true);
 	CONTROL_VARIABLE = 1;
@@ -294,7 +292,7 @@ bool startup(void) {
 
 #ifdef SDREAD
 
-bool sdRead (u32 sector, u8* dest)
+ARM_CODE bool sdRead (u32 sector, u8* dest)
 {
 	while (acquire_mutex(MUTEX_ADDR,2) != 0);
 	sysSetCardOwner(true);
@@ -311,7 +309,7 @@ bool sdRead (u32 sector, u8* dest)
 
 #ifdef SDWRITE
 
-bool sdWrite (u32 sector, u8* src)
+ARM_CODE bool sdWrite (u32 sector, u8* src)
 {
 	while (acquire_mutex(MUTEX_ADDR,2) != 0);
 	sysSetCardOwner(true);
