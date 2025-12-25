@@ -37,7 +37,7 @@ endif
 
 .PHONY: all clean sd_patches dldi_boot miniboot9 miniboot7
 
-all: $(TARGET)-enc.nds
+all: $(TARGET).nds
 	
 clean:
 	@echo "  CLEAN"
@@ -47,18 +47,16 @@ clean:
 
 $(TARGET).nds: build/arm9.bin build/arm7.bin
 	@echo "  BUILDING"
-	$(_V)$(NDSTOOL) -c $@ \
+	$(_V)$(NDSTOOL) -c build/$@.dec \
 		-7 build/arm7.bin -9 build/arm9.bin \
 		-t data/banner.bin -h data/header.bin \
 		-r9 0x02100000 -e9 0x02100800 \
 		-r7 0x02380000 -e7 0x02380000
-	$(_V)$(DLDIPATCH) patch dldi/gmtf.dldi $@
-
-$(TARGET)-enc.nds: $(TARGET).nds
+	$(_V)$(DLDIPATCH) patch dldi/gmtf.dldi build/$@.dec
 	@echo "  ENCRYPTING"
-	$(_V)$(CP) $(TARGET).nds build/$@
+	$(_V)$(CP) build/$@.dec build/$@
 	$(_V)$(DD) if=data/secure-area.bin of=build/$@ seek=16 status=none
-	$(_V)$(DD) if=$(TARGET).nds of=build/$@ skip=36 seek=36 status=none
+	$(_V)$(DD) if=build/$@.dec of=build/$@ skip=36 seek=36 status=none
 	$(_V)$(MV) build/$@ $@
 	$(_V)$(NDSTOOL) -fh $@
 	$(_V)$(CP) $@ gnm-backup.bin
